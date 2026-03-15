@@ -1,7 +1,7 @@
 const express = require("express");
 const bcrypt = require("bcrypt");
 const saltRounds = 10;
-const User = require("../models/User"); 
+const User = require("../models/User");
 const jwt = require("jsonwebtoken");
 
 const router = express.Router();
@@ -24,14 +24,31 @@ const authenticateToken = (req, res, next) => {
 router.post("/signup", async (req, res) => {
     try {
         const { username, email, password } = req.body;
+
+        // Validation
+        if (!username || !email || !password) {
+            return res.status(400).json({ message: "Please provide username, email, and password" });
+        }
+
+        // Check if user exists
+        const Userb = await User.findOne({ $or: [{ email }, { username }] });
+        if (Userb) {
+            return res.status(400).json({ message: "Email or username already exists" });
+        }
+
         const hashedPassword = await bcrypt.hash(password, saltRounds);
         const user = new User({ username, email, password: hashedPassword });
         await user.save();
+
         const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: "1h" });
-        res.status(201).json({ message: "User created successfully", token });
+        res.status(201).json({
+            message: "User created successfully",
+            token,
+            user: { id: user._id, username: user.username, email: user.email, todos: user.todos }
+        });
     } catch (err) {
-        res.status(400).json({ message: err.message });
-        console.log(err)
+        console.error("Signup Error:", err);
+        res.status(500).json({ message: err.message || "Signup failed" });
     }
 });
 
@@ -39,16 +56,29 @@ router.post("/signup", async (req, res) => {
 router.post("/signin", async (req, res) => {
     try {
         const { email, password } = req.body;
+
+        if (!email || !password) {
+            return res.status(400).json({ message: "Email and password are required" });
+        }
+
         const user = await User.findOne({ email });
-        if (!user) return res.status(404).json({ message: "User not found" });
+        if (!user) {
+            return res.status(404).json({ message: "User not found" });
+        }
 
         const isMatch = await bcrypt.compare(password, user.password);
-        if (!isMatch) return res.status(400).json({ message: "Password is not correct" });
+        if (!isMatch) {
+            return res.status(400).json({ message: "Invalid password" });
+        }
 
         const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: "1h" });
-        res.json({ token, user: { id: user._id, username: user.username, email: user.email, todos: user.todos } });
+        res.json({
+            token,
+            user: { id: user._id, username: user.username, email: user.email, todos: user.todos }
+        });
     } catch (err) {
-        res.status(500).json({ message: err.message });
+        console.error("Signin Error:", err);
+        res.status(500).json({ message: err.message || "Server error during signin" });
     }
 });
 

@@ -7,47 +7,18 @@ app.set('view engine', 'ejs')
 app.use(express.urlencoded({ extended: true }))
 app.use(express.static('public'))
 const cors = require('cors');
-app.use(cors());
-
+app.use(cors({
+    origin: ['https://front-todo-hazel.vercel.app', 'http://localhost:5173'],
+    credentials: true
+}));
 
 app.use(express.json());
 
 const authRoutes = require('./router/user.route');
 app.use('/api/auth', authRoutes);
 
-
-const port = process.env.PORT;
+const port = process.env.PORT || 5630;
 const MONGO_URI = process.env.URI || process.env.MONGO_URI;
-
-// let users = [];
-
-// app.get('/signup', (req, res) => {
-//     res.render('signup')
-// })
-
-// app.post('/confirm', (req, res) => {
-//     const { username, email, password } = req.body;
-//     users.push({ username, email, password });
-//     console.log(users);
-//     res.send('Sign up successful')
-// })
-
-// // login
-// app.get('/login', (req, res) => {
-//     res.render('login')
-// })
-// app.post('/enter', (req, res) => {
-//     const { username, password } = req.body;
-//     const user = users.find(u => u.username === username && u.password === password);
-//     if (user) {
-//         res.send('Login successful')
-//     } else {
-//         res.send('Invalid credentials')
-//     }
-// })
-
-
-
 
 mongoose.connect(MONGO_URI)
     .then(() =>
